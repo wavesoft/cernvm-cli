@@ -26,7 +26,7 @@ if (WIN32)
 	# Fix: For some reason CURL_STATICLIB is not defined
 	ADD_DEFINITIONS(-DCURL_STATICLIB)
 	# Fix: OpenSSL builds are not built with safe exception handlers
-	ADD_DEFINITIONS(-DSAFESEH:NO)
+	ADD_DEFINITIONS(-SAFESEH:NO)
 endif(WIN32)
 
 # Locate the common sources

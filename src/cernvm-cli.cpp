@@ -19,6 +19,9 @@
  */
 
 #include <CernVM/Hypervisor.h>
+#include <boost/make_shared.hpp>
+
+#include "CLIInteraction.h"
 
 /**
  * Entry point for the CLI
@@ -27,6 +30,16 @@ int main( int argc, char ** argv ) {
 
 	// Create a hypervisor instance
 	HVInstancePtr hv = detectHypervisor();
+	UserInteractionPtr ui = boost::make_shared<CLIInteraction>();
+
+	// Setup user interaction
+	hv->setUserInteraction( ui );
+
+	// Try to open a session
+	ParameterMapPtr params = ParameterMap::instance();
+	params->set("name", "test")
+		   .set("key", "test");
+	HVSessionPtr session = hv->sessionOpen( params, FiniteTaskPtr() );
 
 	// Success
 	return 0;

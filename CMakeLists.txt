@@ -1,5 +1,21 @@
 cmake_minimum_required (VERSION 2.6)
 
+# Guess system architecture
+set(GUESS_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+if(CMAKE_OSX_ARCHITECTURES)
+	set(GUESS_ARCH ${CMAKE_OSX_ARCHITECTURES})
+endif()
+# We don't do any differentiation for AMD64 instruction set
+if(${GUESS_ARCH} STREQUAL "AMD64")
+	set(GUESS_ARCH "x86_64")
+endif()
+
+# Prompt architecture
+set(TARGET_ARCH "${GUESS_ARCH}" CACHE STRING "Define the target architecture" )
+set(CMAKE_OSX_ARCHITECTURES ${TARGET_ARCH})
+set(OSX_ARCHITECTURES ${TARGET_ARCH})
+message(STATUS "Building cernvm-cli for arch: ${TARGET_ARCH}")
+
 # CernVM Library
 project ( cernvm-cli )
 set(VERSION "1.0.0")

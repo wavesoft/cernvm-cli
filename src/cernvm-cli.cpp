@@ -24,6 +24,7 @@
 #include <boost/make_shared.hpp>
 #include "CLIInteraction.h"
 
+#include <map>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -38,39 +39,41 @@ FiniteTaskPtr	 	progressTask;
 
 void show_help( const string& error ) {
 	if (!error.empty()) {
-		cout << "ERROR: " << error << endl;
+		cerr << "ERROR: " << error << endl;
 	}
 	cout << "Usage:" << endl;
 	cout << endl;
-	cout << "   cernvm-cli <general options> <command> " << endl;
+	cout << "   cernvm-cli <command> [<session> [<arguments>]]" << endl;
 	cout << endl;
-	cout << "General Options:" << endl << endl;
-	cout << "   [-n|--name]            The name of the session" << endl;
-	cout << "   [-k|--key]             The secret key for accessing the session" << endl;
+	cout << "Commands without arguments:" << endl;
+	cout << endl;
+	cout << "   list                        List the registered machines" << endl;
 	cout << endl;
 	cout << "Commands:" << endl;
 	cout << endl;
-	cout << "   open     [--32]        Use 32-bit linux version (default x86_64)" << endl;
-	cout << "            [--fio]       Use FloppyIO data exchange" << endl;
-	cout << "            [--ui]        Enable UI additions" << endl;
-	cout << "            [--dualnic]   Use two NICs instead of NATing through one" << endl;
-	cout << "            [--ram <MB>]  How much RAM to allocate on the new VM" << endl;
-	cout << "            [--hdd <MB>]  How much disk to allocate on the new VM" << endl;
-	cout << "            [--ver <ver>] The uCernVM version to use" << endl;
+	cout << "   setup    [--32]             Use 32-bit linux version (default x86_64)" << endl;
+	cout << "            [--fio]            Use FloppyIO data exchange" << endl;
+	cout << "            [--gui]            Enable GUI additions" << endl;
+	cout << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
+	cout << "            [--ram <MB>]       How much RAM to allocate on the new VM (default 1024)" << endl;
+	cout << "            [--hdd <MB>]       How much disk to allocate on the new VM (default 1024)" << endl;
+	cout << "            [--ver <ver>]      The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
+	cout << "            [--api <num>]      Define the API port to use (default 80)" << endl;
+	cout << "            [--context <uuid>] The ContextID from CernVM-Online to boot" << endl;
 	cout << endl;
-	cout << "   start    <context>     The ContextID from CernVM online to boot" << endl;
-	cout << "   save                   Save the VM on disk" << endl;
-	cout << "   stop                   Stop the VM" << endl;
-	cout << "   pause                  Pause the VM" << endl;
-	cout << "   resume                 Resume the VM" << endl;
-	cout << "   remove                 Destroy and remove the VM" << endl;
-
+	cout << "   start                       Start the VM" << endl;
+	cout << "   stop                        Stop the VM" << endl;
+	cout << "   save                        Save the VM on disk" << endl;
+	cout << "   pause                       Pause the VM on memory" << endl;
+	cout << "   resume                      Resume the VM" << endl;
+	cout << "   remove                      Destroy and remove the VM" << endl;
+	cout << endl;
 }
 
 int handle_open( list<string>& args, const string& name, const string& key ) {
 
-	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT;
-	string	str_ver="1.17-8", strval, arg;
+	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT, int_port=80;
+	string	str_ver="1.17-8", context_id="", strval, arg;
 
 	while (!args.empty()) {
 		arg = args.front();
@@ -80,7 +83,7 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 		} else if (arg.compare("--fio") == 0) {
 			args.pop_front();
 			int_flags |= HVF_FLOPPY_IO;
-		} else if (arg.compare("--ui") == 0) {
+		} else if (arg.compare("--gui") == 0) {
 			args.pop_front();
 			int_flags |= HVF_GUEST_ADDITIONS;
 			int_flags |= HVF_HEADFUL;
@@ -111,19 +114,48 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 				return 100;
 			}
 			str_ver = args.front(); args.pop_front();
+		} else if (arg.compare("--api") == 0) {
+			args.pop_front();
+			if (args.empty()) {
+				show_help("Missing value for the '--api' argument");
+				return 100;
+			}
+			strval = args.front(); args.pop_front();
+			int_port = ston<int>(strval);
+		} else if (arg.compare("--context") == 0) {
+			args.pop_front();
+			if (args.empty()) {
+				show_help("Missing value for the '--context' argument");
+				return 100;
+			}
+			context_id = args.front(); args.pop_front();
+		} else {
+			cerr << "WARNING: Ignored unnown parameter '" << arg << "'" << endl;
 		}
 	}
 
+	/*
 	cout << "Name=" << name << ", Secret=" << key << endl;
 	cout << "Version=" << str_ver << ", Flags=" << int_flags << endl;
 	cout << "Ram=" << int_ram << ", Hdd=" << int_hdd << endl;
 	cout << "Hypervisor=" << hv->version.verString << endl;
+	*/
+	
+	// Prepare UserData
+	ostringstream oss;
+	if (!context_id.empty()) {
+		// Make it boot the given context
+		oss << "[cernvm]\ncontextualization_key=" << context_id.front();
+		oss << "\n";
+	}
 
 	// Try to open a session
 	ParameterMapPtr params = ParameterMap::instance();
 	params->set("name", name)
 		   .set("secret", key)
 		   .set("version", str_ver)
+		   .set("userData", oss.str())
+		   .setNum<int>("apiPort", int_port)
 		   .setNum<int>("flags", int_flags)
 		   .setNum<int>("ram", int_ram)
 		   .setNum<int>("hdd", int_hdd);
@@ -138,21 +170,10 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 
 int handle_start( list<string>& args, const string& name, const string& key ) {
 	
-	// Prepare UserData
-	ostringstream oss;
-	if (!args.empty()) {
-
-		// Make it boot the given context
-		oss << "[cernvm]\ncontextualization_key=" << args.front();
-		oss << "\n";
-
-	}
-
 	// Try to open a session
 	ParameterMapPtr params = ParameterMap::instance();
 	params->set("name", name)
-		   .set("secret", key)
-		   .set("userData", oss.str());
+		   .set("secret", key);
 	HVSessionPtr session = hv->sessionOpen( params, progressTask );
 
 	// Start session with blank key/value userData
@@ -265,6 +286,29 @@ int handle_remove( list<string>& args, const string& name, const string& key ) {
 
 }
 
+int handle_list( list<string>& args ) {
+
+	// Iterate over open sessions
+	cout << "Registered sessions with libCernVM:" << endl;
+	cout << endl;
+	for (std::map< std::string, HVSessionPtr >::iterator it = hv->sessions.begin(); it != hv->sessions.end(); ++it) {
+		string name = (*it).first;
+		HVSessionPtr sess = (*it).second;
+		cout << " - " << sess->parameters->get("name", "") << " (" << name << ")" << endl;
+		cout << "   cpus=" << sess->parameters->get("cpus", "1")
+		     << ", ram=" << sess->parameters->get("memory", "512")
+		     << ", disk=" << sess->parameters->get("disk", "1024")
+		     << ", apiPort=" << sess->parameters->get("apiPort", BOOST_PP_STRINGIZE( DEFAULT_API_PORT ))
+		     << ", flags=" << sess->parameters->get("flags", "9")
+		     << ", uCernVM=" << sess->parameters->get("cernvmVersion", "9") << endl << endl;
+	}
+	cout << endl;
+
+	// return ok
+	return 0;
+
+}
+
 /**
  * Entry point for the CLI
  */
@@ -287,31 +331,12 @@ int main( int argc, char ** argv ) {
 	}
 
 	// Look for name and key
-	string name="", key="", arg;
-	while (!args.empty()) {
-		arg = args.front();
-		if (arg.compare("-n") == 0) {
-			args.pop_front();
-			if (args.empty()) {
-				show_help("Missing value for the '-n' argument");
-				return 100;
-			}
-			name = args.front(); args.pop_front();
-		} else if (arg.compare("-k") == 0) {
-			args.pop_front();
-			if (args.empty()) {
-				show_help("Missing value for the '-k' argument");
-				return 100;
-			}
-			key = args.front(); args.pop_front();
-		} else {
-			if (arg[0] == '-') {
-				show_help("Unknown general argument specified");
-				return 100;
-			}
-			break;
-		}
+	string arg, command, session;
+	if (args.empty()) {
+		show_help("Missing command!");
+		return 100;
 	}
+	command = args.front(); args.pop_front();
 
 	// Create a hypervisor instance
 	hv = detectHypervisor();
@@ -322,28 +347,57 @@ int main( int argc, char ** argv ) {
 	hv->setUserInteraction( userInteraction );
 	hv->waitTillReady( progressTask, userInteraction );
 
+	// Handle commands wihtout parameters
+	if (command.compare("list") == 0) { /* LIST */
+		return handle_list(args);	
+	}
+
+	// Handle cases where a session name is needed
+	if (args.empty()) {
+		show_help("Missing session name!");
+		return 100;
+	}
+	session = args.front(); args.pop_front();
+
+	// Calculate session key
+	// TODO: Make this a bit more difficult to guess
+	string key = session;
+
+	// Validate session
+	ParameterMapPtr params = ParameterMap::instance();
+	params->set("name", session)
+		   .set("secret", session);
+	int status = hv->sessionValidate( params );
+	if (status == 2) {
+		cerr << "ERROR: Could not open session " << session <<"!" << endl;
+		cerr << "       (was that session created from another source?)" << endl;
+		return 1;
+	} else if ((status == 0) && (command.compare("setup") != 0)) {
+		cerr << "ERROR: The specified session " << session <<" does not exist!" << endl;
+		return 2;
+	}
+
 	// Handle action
-	arg = args.front(); args.pop_front();
-	if (arg.compare("open") == 0) { /* OPEN */
-		return handle_open(args, name, key);
+	if (command.compare("setup") == 0) { /* OPEN */
+		return handle_open(args, session, key);
 
-	} else if (arg.compare("start") == 0) { /* START */
-		return handle_start(args, name, key);
+	} else if (command.compare("start") == 0) { /* START */
+		return handle_start(args, session, key);
 
-	} else if (arg.compare("stop") == 0) { /* STOP */
-		return handle_stop(args, name, key);
+	} else if (command.compare("stop") == 0) { /* STOP */
+		return handle_stop(args, session, key);
 
-	} else if (arg.compare("pause") == 0) { /* PAUSE */
-		return handle_pause(args, name, key);
+	} else if (command.compare("pause") == 0) { /* PAUSE */
+		return handle_pause(args, session, key);
 
-	} else if (arg.compare("resume") == 0) { /* RESUME */
-		return handle_resume(args, name, key);
+	} else if (command.compare("resume") == 0) { /* RESUME */
+		return handle_resume(args, session, key);
 
-	} else if (arg.compare("save") == 0) { /* SAVE */
-		return handle_save(args, name, key);
+	} else if (command.compare("save") == 0) { /* SAVE */
+		return handle_save(args, session, key);
 
-	} else if (arg.compare("remove") == 0) { /* REMOVE */
-		return handle_remove(args, name, key);
+	} else if (command.compare("remove") == 0) { /* REMOVE */
+		return handle_remove(args, session, key);
 
 	} else {
 		cout << "Unknown command " << arg << "!" << endl;

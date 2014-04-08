@@ -23,6 +23,7 @@
 
 #include <boost/make_shared.hpp>
 #include "CLIInteraction.h"
+#include "CLIProgressFeedback.h"
 
 #include <map>
 #include <iostream>
@@ -342,6 +343,10 @@ int main( int argc, char ** argv ) {
 	hv = detectHypervisor();
 	userInteraction = boost::make_shared<CLIInteraction>();
 	progressTask = boost::make_shared<FiniteTask>();
+
+	// Create a CLI-Based user feedback
+	CLIProgessFeedback clifeedback;
+	clifeedback.bindTo( progressTask );
 
 	// Initialize hypervisor
 	hv->setUserInteraction( userInteraction );

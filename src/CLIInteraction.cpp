@@ -26,8 +26,10 @@ bool prompt( const std::string& message ) {
 		std::cout << message << " [y/n]: ";
 		std::getline( std::cin, line );
 		if ((line.compare("y") == 0) || (line.compare("Y") == 0)) {
+			std::cout << "-----------------------------" << std::endl;
 			return true;
 		} else if ((line.compare("n") == 0) || (line.compare("N") == 0)) {
+			std::cout << "-----------------------------" << std::endl;
 			return false;
 		}
 	}
@@ -45,7 +47,7 @@ CLIInteraction::CLIInteraction() : UserInteraction() {
  * Confirm from the CLI
  */
 void CLIInteraction::cli_confirm(const std::string& title, const std::string& message, const callbackResult& result) {
-	std::cout << "---[ " << title << " ]---" << std::endl;
+	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << message << std::endl;
 	if (prompt("Do you confirm?")) {
 		result(UI_OK);
@@ -58,7 +60,7 @@ void CLIInteraction::cli_confirm(const std::string& title, const std::string& me
  * Alert from the CLI
  */
 void CLIInteraction::cli_alert(const std::string& title, const std::string& message, const callbackResult& result) {
-	std::cout << "---[ " << title << " ]---" << std::endl;
+	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << message << std::endl;
 	std::cout << "-----------------------------" << std::endl;
 }
@@ -67,7 +69,7 @@ void CLIInteraction::cli_alert(const std::string& title, const std::string& mess
  * Confirm licese from the CLI
  */
 void CLIInteraction::cli_license(const std::string& title, const std::string& message, const callbackResult& result) {
-	std::cout << "---[ " << title << " ]---" << std::endl;
+	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << message << std::endl;
 	if (prompt("Do you accept the above license?")) {
 		result(UI_OK);
@@ -80,7 +82,7 @@ void CLIInteraction::cli_license(const std::string& title, const std::string& me
  * Confirm licese by URL from the CLI
  */
 void CLIInteraction::cli_license_url(const std::string& title, const std::string& url, const callbackResult& result) {
-	std::cout << "---[ " << title << " ]---" << std::endl;
+	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << "See the license here: " << url << std::endl;
 	if (prompt("Do you accept the above license?")) {
 		result(UI_OK);

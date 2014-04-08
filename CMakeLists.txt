@@ -1,7 +1,10 @@
 cmake_minimum_required (VERSION 2.6)
 
 # Guess system architecture
-set(GUESS_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+set(GUESS_ARCH "i386")
+if(CMAKE_SYSTEM_PROCESSOR)
+	set(GUESS_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+endif()
 if(CMAKE_OSX_ARCHITECTURES)
 	set(GUESS_ARCH ${CMAKE_OSX_ARCHITECTURES})
 endif()

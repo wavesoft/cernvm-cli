@@ -52,7 +52,7 @@ void show_help( const string& error ) {
 	cout << endl;
 	cout << "Commands:" << endl;
 	cout << endl;
-	cout << "   setup    [--32]             Use 32-bit linux version (default x86_64)" << endl;
+	cout << "   open     [--32]             Use 32-bit linux version (default x86_64)" << endl;
 	cout << "            [--fio]            Use FloppyIO data exchange" << endl;
 	cout << "            [--gui]            Enable GUI additions" << endl;
 	cout << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
@@ -67,7 +67,7 @@ void show_help( const string& error ) {
 	cout << "   save                        Save the VM on disk" << endl;
 	cout << "   pause                       Pause the VM on memory" << endl;
 	cout << "   resume                      Resume the VM" << endl;
-	cout << "   remove                      Destroy and remove the VM" << endl;
+	cout << "   close                       Destroy and remove the VM" << endl;
 	cout << endl;
 }
 
@@ -154,13 +154,16 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 	ParameterMapPtr params = ParameterMap::instance();
 	params->set("name", name)
 		   .set("secret", key)
-		   .set("version", str_ver)
+		   .set("cernvmVersion", str_ver)
 		   .set("userData", oss.str())
 		   .setNum<int>("apiPort", int_port)
 		   .setNum<int>("flags", int_flags)
 		   .setNum<int>("ram", int_ram)
 		   .setNum<int>("hdd", int_hdd);
 	HVSessionPtr session = hv->sessionOpen( params, progressTask );
+    
+    // Open
+    session->open();
 
 	// Wait for completion
 	session->wait();
@@ -265,7 +268,7 @@ int handle_save( list<string>& args, const string& name, const string& key ) {
 
 }
 
-int handle_remove( list<string>& args, const string& name, const string& key ) {
+int handle_close( list<string>& args, const string& name, const string& key ) {
 
 	// Try to open a session
 	ParameterMapPtr params = ParameterMap::instance();
@@ -301,7 +304,7 @@ int handle_list( list<string>& args ) {
 		     << ", disk=" << sess->parameters->get("disk", "1024")
 		     << ", apiPort=" << sess->parameters->get("apiPort", BOOST_PP_STRINGIZE( DEFAULT_API_PORT ))
 		     << ", flags=" << sess->parameters->get("flags", "9")
-		     << ", uCernVM=" << sess->parameters->get("cernvmVersion", "9") << endl << endl;
+             << ", uCernVM=" << sess->parameters->get("cernvmVersion", DEFAULT_CERNVM_VERSION) << endl << endl;
 	}
 	cout << endl;
 
@@ -383,7 +386,7 @@ int main( int argc, char ** argv ) {
 	}
 
 	// Handle action
-	if (command.compare("setup") == 0) { /* OPEN */
+	if (command.compare("open") == 0) { /* OPEN */
 		return handle_open(args, session, key);
 
 	} else if (command.compare("start") == 0) { /* START */
@@ -401,8 +404,8 @@ int main( int argc, char ** argv ) {
 	} else if (command.compare("save") == 0) { /* SAVE */
 		return handle_save(args, session, key);
 
-	} else if (command.compare("remove") == 0) { /* REMOVE */
-		return handle_remove(args, session, key);
+	} else if (command.compare("close") == 0) { /* REMOVE */
+		return handle_close(args, session, key);
 
 	} else {
 		cout << "Unknown command " << arg << "!" << endl;

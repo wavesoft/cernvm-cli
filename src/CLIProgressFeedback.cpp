@@ -19,7 +19,7 @@
  */
 
 #include "CLIProgressFeedback.h"
-#include <cmath>
+#include <math.h>
 
 void CLIProgessFeedback::bindTo( const FiniteTaskPtr & pf ) {
 	// Bind event handlers
@@ -48,12 +48,11 @@ void CLIProgessFeedback::fb_failed(VariantArgList& args) {
 
 void CLIProgessFeedback::fb_progress(VariantArgList& args) {
 	std::ostringstream oss;
-	double percent = round(boost::get<double>( args[1] ) * 100.0);
-	int percentInt = percent;
+	int percentInt = (int)(boost::get<double>( args[1] ) * 100.0);
 
 	oss << "[" << percentInt;
-	if (percent < 100) { oss << " "; }
-	if (percent < 10) { oss << " "; }
+	if (percentInt < 100) { oss << " "; }
+	if (percentInt < 10) { oss << " "; }
 
 	oss << "%] " << boost::get<string>( args[0] );
 	showMessage(oss);

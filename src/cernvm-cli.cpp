@@ -162,8 +162,8 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 		   .setNum<int>("hdd", int_hdd);
 	HVSessionPtr session = hv->sessionOpen( params, progressTask );
     
-    // Open
-    session->open();
+    // Open & reach poweroff state
+    session->stop();
 
 	// Wait for completion
 	session->wait();
@@ -380,7 +380,7 @@ int main( int argc, char ** argv ) {
 		cerr << "ERROR: Could not open session " << session <<"!" << endl;
 		cerr << "       (was that session created from another source?)" << endl;
 		return 1;
-	} else if ((status == 0) && (command.compare("setup") != 0)) {
+	} else if ((status == 0) && (command.compare("open") != 0)) {
 		cerr << "ERROR: The specified session " << session <<" does not exist!" << endl;
 		return 2;
 	}

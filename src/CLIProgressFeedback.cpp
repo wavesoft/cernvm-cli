@@ -37,13 +37,14 @@ void CLIProgessFeedback::fb_started(VariantArgList& args) {
 
 void CLIProgessFeedback::fb_completed(VariantArgList& args) {
 	clearMessage();
+    cerr << "[ ok ] " << boost::get<string>( args[0] ) << endl;
 }
 
 void CLIProgessFeedback::fb_failed(VariantArgList& args) {
 	std::ostringstream oss;
 	oss << "[!!!!] " << boost::get<string>( args[0] );
 	showMessage(oss);
-	cout << endl;
+	cerr << endl;
 }
 
 void CLIProgessFeedback::fb_progress(VariantArgList& args) {
@@ -63,19 +64,19 @@ void CLIProgessFeedback::showMessage(const std::ostringstream& ss) {
 	if (messageLength > 0)
 		clearMessage();
 	messageLength = msg.length();
-	cout << msg;
-	cout.flush();
+	cerr << msg;
+	cerr.flush();
 }
 
 void CLIProgessFeedback::clearMessage() {
 	if (messageLength <= 0) return;
 	// Clear area
 	int i;
-	for (i=0; i<messageLength; i++) { cout << "\b"; };
-	for (i=0; i<messageLength; i++) { cout << " "; };
+	for (i=0; i<messageLength; i++) { cerr << "\b"; };
+	for (i=0; i<messageLength; i++) { cerr << " "; };
 	// Rewind cursor
-	for (i=0; i<messageLength; i++) { cout << "\b"; };
+	for (i=0; i<messageLength; i++) { cerr << "\b"; };
 	// Reset
-	cout.flush();
+	cerr.flush();
 	messageLength = 0;
 }

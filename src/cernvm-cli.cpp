@@ -42,33 +42,36 @@ void show_help( const string& error ) {
 	if (!error.empty()) {
 		cerr << "ERROR: " << error << endl;
 	}
-	cout << "Usage:" << endl;
-	cout << endl;
-	cout << "   cernvm-cli <command> [<session> [<arguments>]]" << endl;
-	cout << endl;
-	cout << "Commands without arguments:" << endl;
-	cout << endl;
-	cout << "   list                        List the registered machines" << endl;
-	cout << endl;
-	cout << "Commands:" << endl;
-	cout << endl;
-	cout << "   open     [--32]             Use 32-bit linux version (default x86_64)" << endl;
-	cout << "            [--fio]            Use FloppyIO data exchange" << endl;
-	cout << "            [--gui]            Enable GUI additions" << endl;
-	cout << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
-	cout << "            [--ram <MB>]       How much RAM to allocate on the new VM (default 1024)" << endl;
-	cout << "            [--hdd <MB>]       How much disk to allocate on the new VM (default 1024)" << endl;
-	cout << "            [--ver <ver>]      The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
-	cout << "            [--api <num>]      Define the API port to use (default 80)" << endl;
-	cout << "            [--context <uuid>] The ContextID from CernVM-Online to boot" << endl;
-	cout << endl;
-	cout << "   start                       Start the VM" << endl;
-	cout << "   stop                        Stop the VM" << endl;
-	cout << "   save                        Save the VM on disk" << endl;
-	cout << "   pause                       Pause the VM on memory" << endl;
-	cout << "   resume                      Resume the VM" << endl;
-	cout << "   close                       Destroy and remove the VM" << endl;
-	cout << endl;
+	cerr << "CernVM Command Line Interface - v1.0" << endl;
+	cerr << "(C) 2014 Ioannis Charalampidis, PH/TH & CernVM Group, CERN" << endl;
+	cerr << endl;
+    cerr << "Usage:" << endl;
+	cerr << endl;
+	cerr << "   cernvm-cli <command> [<session> [<arguments>]]" << endl;
+	cerr << endl;
+	cerr << "Commands without arguments:" << endl;
+	cerr << endl;
+	cerr << "   list                        List the registered machines" << endl;
+	cerr << endl;
+	cerr << "Commands:" << endl;
+	cerr << endl;
+	cerr << "   open     [--32]             Use 32-bit linux version (default x86_64)" << endl;
+	cerr << "            [--fio]            Use FloppyIO data exchange" << endl;
+	cerr << "            [--gui]            Enable GUI additions" << endl;
+	cerr << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
+	cerr << "            [--ram <MB>]       How much RAM to allocate on the new VM (default 1024)" << endl;
+	cerr << "            [--hdd <MB>]       How much disk to allocate on the new VM (default 1024)" << endl;
+	cerr << "            [--ver <ver>]      The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
+	cerr << "            [--api <num>]      Define the API port to use (default 80)" << endl;
+	cerr << "            [--context <uuid>] The ContextID from CernVM-Online to boot" << endl;
+	cerr << endl;
+	cerr << "   start                       Start the VM" << endl;
+	cerr << "   stop                        Stop the VM" << endl;
+	cerr << "   save                        Save the VM on disk" << endl;
+	cerr << "   pause                       Pause the VM on memory" << endl;
+	cerr << "   resume                      Resume the VM" << endl;
+	cerr << "   close                       Destroy and remove the VM" << endl;
+	cerr << endl;
 }
 
 int handle_open( list<string>& args, const string& name, const string& key ) {
@@ -136,17 +139,17 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 	}
 
 	/*
-	cout << "Name=" << name << ", Secret=" << key << endl;
-	cout << "Version=" << str_ver << ", Flags=" << int_flags << endl;
-	cout << "Ram=" << int_ram << ", Hdd=" << int_hdd << endl;
-	cout << "Hypervisor=" << hv->version.verString << endl;
+	cerr << "Name=" << name << ", Secret=" << key << endl;
+	cerr << "Version=" << str_ver << ", Flags=" << int_flags << endl;
+	cerr << "Ram=" << int_ram << ", Hdd=" << int_hdd << endl;
+	cerr << "Hypervisor=" << hv->version.verString << endl;
 	*/
 	
 	// Prepare UserData
 	ostringstream oss;
 	if (!context_id.empty()) {
 		// Make it boot the given context
-		oss << "[cernvm]\ncontextualization_key=" << context_id.front();
+		oss << "[cernvm]\ncontextualization_key=" << context_id;
 		oss << "\n";
 	}
 
@@ -293,8 +296,8 @@ int handle_close( list<string>& args, const string& name, const string& key ) {
 int handle_list( list<string>& args ) {
 
 	// Iterate over open sessions
-	cout << "Registered sessions with libCernVM:" << endl;
-	cout << endl;
+	cerr << "Registered sessions with libCernVM:" << endl;
+	cerr << endl;
 	for (std::map< std::string, HVSessionPtr >::iterator it = hv->sessions.begin(); it != hv->sessions.end(); ++it) {
 		string name = (*it).first;
 		HVSessionPtr sess = (*it).second;
@@ -306,7 +309,7 @@ int handle_list( list<string>& args ) {
 		     << ", flags=" << sess->parameters->get("flags", "9")
              << ", uCernVM=" << sess->parameters->get("cernvmVersion", DEFAULT_CERNVM_VERSION) << endl << endl;
 	}
-	cout << endl;
+	cerr << endl;
 
 	// return ok
 	return 0;
@@ -314,13 +317,29 @@ int handle_list( list<string>& args ) {
 }
 
 /**
+ * Return a config parameter
+ */
+int handle_get( list<string>& args, const string& name, const string& key ) {
+
+	// Try to open a session
+	ParameterMapPtr params = ParameterMap::instance();
+	params->set("name", name)
+		   .set("secret", key);
+	HVSessionPtr session = hv->sessionOpen( params, progressTask );
+
+    // Return parameter
+    for ( list<string>::iterator it = args.begin(); it != args.end(); ++it) {
+        string arg = *it;
+        cout << arg << "=" << session->parameters->get(arg,"<not defined>") << endl;
+    }
+
+    return 0;
+}
+
+/**
  * Entry point for the CLI
  */
 int main( int argc, char ** argv ) {
-
-	cout << "CernVM Command Line Interface - v1.0" << endl;
-	cout << "(C) 2014 Ioannis Charalampidis, PH/TH & CernVM Groups" << endl;
-	cout << endl;
 
 	// Check for obvious errors
 	if (argc < 2) {
@@ -367,6 +386,12 @@ int main( int argc, char ** argv ) {
 	}
 	session = args.front(); args.pop_front();
 
+	// Check for flag in place of session
+	if (session[0] == '-') {
+		show_help("Expected session name, not command");
+		return 100;
+	}
+
 	// Calculate session key
 	// TODO: Make this a bit more difficult to guess
 	string key = session;
@@ -407,8 +432,11 @@ int main( int argc, char ** argv ) {
 	} else if (command.compare("close") == 0) { /* REMOVE */
 		return handle_close(args, session, key);
 
+    } else if (command.compare("get") == 0) { /* API */
+        return handle_get(args, session, key);
+
 	} else {
-		cout << "Unknown command " << arg << "!" << endl;
+		cerr << "Unknown command " << arg << "!" << endl;
 		show_help("");
 
 	}

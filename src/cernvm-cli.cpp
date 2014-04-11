@@ -55,7 +55,8 @@ void show_help( const string& error ) {
 	cerr << endl;
 	cerr << "Commands:" << endl;
 	cerr << endl;
-	cerr << "   setup    [--32]             Use 32-bit CPU (default is 64-bit)" << endl;
+	cerr << "   setup    <session>			The name of the new session" << endl;
+	cerr << "            [--32]             Use 32-bit CPU (default is 64-bit)" << endl;
 	cerr << "            [--fio]            Use FloppyIO for data exchange" << endl;
 	cerr << "            [--gui]            Enable GUI additions" << endl;
 	cerr << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
@@ -64,13 +65,15 @@ void show_help( const string& error ) {
 	cerr << "            [--ver <ver>]      The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
 	cerr << "            [--api <num>]      Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
 	cerr << "            [--context <uuid>] The ContextID for CernVM-Online to boot" << endl;
+	cerr << "            [--start]          Start the VM after configuration" << endl;
 	cerr << endl;
-	cerr << "   start                       Start the VM" << endl;
-	cerr << "   stop                        Stop the VM" << endl;
-	cerr << "   save                        Save the VM on disk" << endl;
-	cerr << "   pause                       Pause the VM on memory" << endl;
-	cerr << "   resume                      Resume the VM" << endl;
-	cerr << "   remove                      Destroy and remove the VM" << endl;
+	cerr << "   start    <session>          Start the VM" << endl;
+	cerr << "   stop     <session>          Stop the VM" << endl;
+	cerr << "   save     <session>          Save the VM on disk" << endl;
+	cerr << "   pause    <session>          Pause the VM on memory" << endl;
+	cerr << "   resume   <session>          Resume the VM" << endl;
+	cerr << "   remove   <session>          Destroy and remove the VM" << endl;
+	cerr << "   get      <session> <parms>  Get one or more configuration parameter values" << endl;
 	cerr << endl;
 	cerr << "Examples:" << endl;
 	cerr << endl;
@@ -92,6 +95,7 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 
 	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT, int_port=80;
 	string	str_ver="1.17-8", context_id="", strval, arg;
+	bool 	bool_start=false;
 
 	while (!args.empty()) {
 		arg = args.front();
@@ -101,6 +105,9 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 		} else if (arg.compare("--fio") == 0) {
 			args.pop_front();
 			int_flags |= HVF_FLOPPY_IO;
+		} else if (arg.compare("--start") == 0) {
+			args.pop_front();
+			bool_start = true;
 		} else if (arg.compare("--gui") == 0) {
 			args.pop_front();
 			int_flags |= HVF_GUEST_ADDITIONS;
@@ -180,7 +187,12 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 	HVSessionPtr session = hv->sessionOpen( params, progressTask );
     
     // Open & reach poweroff state
-    session->stop();
+    if (bool_start) {
+		ParameterMapPtr userData = ParameterMap::instance();
+		session->start( userData );
+    } else {
+	    session->stop();
+    }
 
 	// Wait for completion
 	session->wait();
@@ -365,7 +377,6 @@ int handle_list( list<string>& args ) {
 		     << ", flags=" << sess->parameters->get("flags", "9")
              << ", uCernVM=" << sess->parameters->get("cernvmVersion", DEFAULT_CERNVM_VERSION) << endl << endl;
 	}
-	cerr << endl;
 
 	// return ok
 	return 0;

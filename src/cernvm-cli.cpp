@@ -51,29 +51,30 @@ void show_help( const string& error ) {
 	cerr << endl;
 	cerr << "Commands without arguments:" << endl;
 	cerr << endl;
-	cerr << "   list                        List the registered machines" << endl;
+	cerr << "   list                                   List the registered machines" << endl;
 	cerr << endl;
 	cerr << "Commands:" << endl;
 	cerr << endl;
-	cerr << "   setup    <session>			The name of the new session" << endl;
-	cerr << "            [--32]             Use 32-bit CPU (default is 64-bit)" << endl;
-	cerr << "            [--fio]            Use FloppyIO for data exchange" << endl;
-	cerr << "            [--gui]            Enable GUI additions" << endl;
-	cerr << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
-	cerr << "            [--ram <MB>]       How much RAM to allocate on the new VM (default 1024)" << endl;
-	cerr << "            [--hdd <MB>]       How much disk to allocate on the new VM (default 1024)" << endl;
-	cerr << "            [--ver <ver>]      The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
-	cerr << "            [--api <num>]      Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
-	cerr << "            [--context <uuid>] The ContextID for CernVM-Online to boot" << endl;
-	cerr << "            [--start]          Start the VM after configuration" << endl;
+	cerr << "   setup    <session>                     The name of the new session" << endl;
+	cerr << "            [--32]                        Use 32-bit CPU (default is 64-bit)" << endl;
+	cerr << "            [--fio]                       Use FloppyIO for data exchange" << endl;
+	cerr << "            [--gui]                       Enable GUI additions" << endl;
+	cerr << "            [--dualnic]                   Use two NICs instead of NATing through one" << endl;
+	cerr << "            [--ram <MB>]                  How much RAM to allocate on the new VM (default 1024)" << endl;
+	cerr << "            [--hdd <MB>]                  How much disk to allocate on the new VM (default 1024)" << endl;
+	cerr << "            [--api <num>]                 Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
+	cerr << "            [--context <uuid>]            The ContextID for CernVM-Online to boot" << endl;
+	cerr << "            [--ver <ver>]                 The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
+    cerr << "            [--flavor devel|testing|prod] The uCernVM flavor to use (default prod)" << endl;
+	cerr << "            [--start]                     Start the VM after configuration" << endl;
 	cerr << endl;
-	cerr << "   start    <session>          Start the VM" << endl;
-	cerr << "   stop     <session>          Stop the VM" << endl;
-	cerr << "   save     <session>          Save the VM on disk" << endl;
-	cerr << "   pause    <session>          Pause the VM on memory" << endl;
-	cerr << "   resume   <session>          Resume the VM" << endl;
-	cerr << "   remove   <session>          Destroy and remove the VM" << endl;
-	cerr << "   get      <session> <parms>  Get one or more configuration parameter values" << endl;
+	cerr << "   start    <session>                     Start the VM" << endl;
+	cerr << "   stop     <session>                     Stop the VM" << endl;
+	cerr << "   save     <session>                     Save the VM on disk" << endl;
+	cerr << "   pause    <session>                     Pause the VM on memory" << endl;
+	cerr << "   resume   <session>                     Resume the VM" << endl;
+	cerr << "   remove   <session>                     Destroy and remove the VM" << endl;
+	cerr << "   get      <session> <parms>             Get one or more configuration parameter values" << endl;
 	cerr << endl;
 	cerr << "Examples:" << endl;
 	cerr << endl;
@@ -94,7 +95,7 @@ void show_help( const string& error ) {
 int handle_setup( list<string>& args, const string& name, const string& key ) {
 
 	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT, int_port=80;
-	string	str_ver="1.17-8", context_id="", strval, arg;
+	string	str_ver="1.17-8", context_id="", str_flavor="prod", strval, arg;
 	bool 	bool_start=false;
 
 	while (!args.empty()) {
@@ -139,6 +140,20 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 				return 5;
 			}
 			str_ver = args.front(); args.pop_front();
+		} else if (arg.compare("--flavor") == 0) {
+			args.pop_front();
+			if (args.empty()) {
+				show_help("Missing value for the '--flavor' argument");
+				return 5;
+			}
+            str_flavor = args.front(); args.pop_front();
+            if ((str_flavor.compare("prod") != 0) &&
+                (str_flavor.compare("testing") != 0) &&
+                (str_flavor.compare("devel") != 0) &&
+                (str_flavor.compare("slc5") != 0)) {
+				show_help("Unknown flavor specified! Should be one of: prod,testing,devel,slc5");
+				return 5;
+            }
 		} else if (arg.compare("--api") == 0) {
 			args.pop_front();
 			if (args.empty()) {
@@ -377,6 +392,9 @@ int handle_list( list<string>& args ) {
 		     << ", flags=" << sess->parameters->get("flags", "9")
              << ", uCernVM=" << sess->parameters->get("cernvmVersion", DEFAULT_CERNVM_VERSION) << endl << endl;
 	}
+    if (hv->sessions.empty()) {
+        cerr << " (There are no registered sessions)" << endl;
+    }
 
 	// return ok
 	return 0;

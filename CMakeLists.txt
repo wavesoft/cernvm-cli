@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.8)
 
 # Guess system architecture
 set(GUESS_ARCH "i386")
@@ -18,6 +18,9 @@ set(TARGET_ARCH "${GUESS_ARCH}" CACHE STRING "Define the target architecture" )
 set(CMAKE_OSX_ARCHITECTURES ${TARGET_ARCH})
 set(OSX_ARCHITECTURES ${TARGET_ARCH})
 message(STATUS "Building cernvm-cli for arch: ${TARGET_ARCH}")
+
+# Logging option
+set(LOGGING_ENABLED 0 CACHE STRING "Define the target architecture" )
 
 # CernVM Library
 project ( cernvm-cli )

@@ -55,26 +55,40 @@ void show_help( const string& error ) {
 	cerr << endl;
 	cerr << "Commands:" << endl;
 	cerr << endl;
-	cerr << "   open     [--32]             Use 32-bit linux version (default x86_64)" << endl;
-	cerr << "            [--fio]            Use FloppyIO data exchange" << endl;
+	cerr << "   setup    [--32]             Use 32-bit CPU (default is 64-bit)" << endl;
+	cerr << "            [--fio]            Use FloppyIO for data exchange" << endl;
 	cerr << "            [--gui]            Enable GUI additions" << endl;
 	cerr << "            [--dualnic]        Use two NICs instead of NATing through one" << endl;
 	cerr << "            [--ram <MB>]       How much RAM to allocate on the new VM (default 1024)" << endl;
 	cerr << "            [--hdd <MB>]       How much disk to allocate on the new VM (default 1024)" << endl;
 	cerr << "            [--ver <ver>]      The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
-	cerr << "            [--api <num>]      Define the API port to use (default 80)" << endl;
-	cerr << "            [--context <uuid>] The ContextID from CernVM-Online to boot" << endl;
+	cerr << "            [--api <num>]      Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
+	cerr << "            [--context <uuid>] The ContextID for CernVM-Online to boot" << endl;
 	cerr << endl;
 	cerr << "   start                       Start the VM" << endl;
 	cerr << "   stop                        Stop the VM" << endl;
 	cerr << "   save                        Save the VM on disk" << endl;
 	cerr << "   pause                       Pause the VM on memory" << endl;
 	cerr << "   resume                      Resume the VM" << endl;
-	cerr << "   close                       Destroy and remove the VM" << endl;
+	cerr << "   remove                      Destroy and remove the VM" << endl;
+	cerr << endl;
+	cerr << "Examples:" << endl;
+	cerr << endl;
+	cerr << "   Before you use a session, you must first set it up, using the 'setup' command," << endl;
+	cerr << "   like this:" << endl;
+	cerr << endl;
+	cerr << "      cernvm-cli setup myvm --gui" << endl;
+	cerr << endl;
+	cerr << "   Then you can control it using the control commands like this:" << endl;
+	cerr << endl;
+	cerr << "      cernvm-cli start myvm" << endl;
 	cerr << endl;
 }
 
-int handle_open( list<string>& args, const string& name, const string& key ) {
+/**
+ * Handle the SETUP command
+ */
+int handle_setup( list<string>& args, const string& name, const string& key ) {
 
 	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT, int_port=80;
 	string	str_ver="1.17-8", context_id="", strval, arg;
@@ -171,10 +185,16 @@ int handle_open( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	return 0;
 
 }
 
+/**
+ * Handle the START command
+ */
 int handle_start( list<string>& args, const string& name, const string& key ) {
 	
 	// Try to open a session
@@ -190,11 +210,17 @@ int handle_start( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	// return ok
 	return 0;
 
 }
 
+/**
+ * Handle the STOP command
+ */
 int handle_stop( list<string>& args, const string& name, const string& key ) {
 
 	// Try to open a session
@@ -209,11 +235,17 @@ int handle_stop( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	// return ok
 	return 0;
 
 }
 
+/**
+ * Handle the PAUSE command
+ */
 int handle_pause( list<string>& args, const string& name, const string& key ) {
 
 	// Try to open a session
@@ -228,11 +260,17 @@ int handle_pause( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	// return ok
 	return 0;
 
 }
 
+/**
+ * Handle the RESUME command
+ */
 int handle_resume( list<string>& args, const string& name, const string& key ) {
 
 	// Try to open a session
@@ -247,11 +285,17 @@ int handle_resume( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	// return ok
 	return 0;
 
 }
 
+/**
+ * Handle the SAVE command
+ */
 int handle_save( list<string>& args, const string& name, const string& key ) {
 
 	// Try to open a session
@@ -266,12 +310,18 @@ int handle_save( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	// return ok
 	return 0;
 
 }
 
-int handle_close( list<string>& args, const string& name, const string& key ) {
+/**
+ * Handle the REMOVE command
+ */
+int handle_remove( list<string>& args, const string& name, const string& key ) {
 
 	// Try to open a session
 	ParameterMapPtr params = ParameterMap::instance();
@@ -285,6 +335,9 @@ int handle_close( list<string>& args, const string& name, const string& key ) {
 	// Wait for completion
 	session->wait();
 
+	// Cleanup thread
+	session->abort();
+
 	// Delete session
 	hv->sessionDelete(session);
 
@@ -293,6 +346,9 @@ int handle_close( list<string>& args, const string& name, const string& key ) {
 
 }
 
+/**
+ * Handle the LIST command
+ */
 int handle_list( list<string>& args ) {
 
 	// Iterate over open sessions
@@ -317,7 +373,7 @@ int handle_list( list<string>& args ) {
 }
 
 /**
- * Return a config parameter
+ * Handle the GET command
  */
 int handle_get( list<string>& args, const string& name, const string& key ) {
 
@@ -326,6 +382,9 @@ int handle_get( list<string>& args, const string& name, const string& key ) {
 	params->set("name", name)
 		   .set("secret", key);
 	HVSessionPtr session = hv->sessionOpen( params, progressTask );
+
+	// Flush stderror (status) messages
+	cerr.flush();
 
     // Return parameter
     for ( list<string>::iterator it = args.begin(); it != args.end(); ++it) {
@@ -404,15 +463,18 @@ int main( int argc, char ** argv ) {
 	if (status == 2) {
 		cerr << "ERROR: Could not open session " << session <<"!" << endl;
 		cerr << "       (was that session created from another source?)" << endl;
+		cerr << endl;
 		return 1;
-	} else if ((status == 0) && (command.compare("open") != 0)) {
+	} else if ((status == 0) && (command.compare("setup") != 0)) {
 		cerr << "ERROR: The specified session " << session <<" does not exist!" << endl;
+		cerr << "       Use the 'setup' command to initialize the session before." << endl;
+		cerr << endl;
 		return 2;
 	}
 
 	// Handle action
-	if (command.compare("open") == 0) { /* OPEN */
-		return handle_open(args, session, key);
+	if (command.compare("setup") == 0) { /* OPEN */
+		return handle_setup(args, session, key);
 
 	} else if (command.compare("start") == 0) { /* START */
 		return handle_start(args, session, key);
@@ -429,8 +491,8 @@ int main( int argc, char ** argv ) {
 	} else if (command.compare("save") == 0) { /* SAVE */
 		return handle_save(args, session, key);
 
-	} else if (command.compare("close") == 0) { /* REMOVE */
-		return handle_close(args, session, key);
+	} else if (command.compare("remove") == 0) { /* REMOVE */
+		return handle_remove(args, session, key);
 
     } else if (command.compare("get") == 0) { /* API */
         return handle_get(args, session, key);

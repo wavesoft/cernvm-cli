@@ -74,7 +74,7 @@ void show_help( const string& error ) {
 	cerr << "   pause    <session>                     Pause the VM on memory" << endl;
 	cerr << "   resume   <session>                     Resume the VM" << endl;
 	cerr << "   remove   <session>                     Destroy and remove the VM" << endl;
-	cerr << "   get      <session> <parms>             Get one or more configuration parameter values" << endl;
+	cerr << "   get      <session> <parm> [<param>...] Get one or more configuration parameter values" << endl;
 	cerr << endl;
 	cerr << "Examples:" << endl;
 	cerr << endl;

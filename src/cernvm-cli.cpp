@@ -120,7 +120,7 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 			args.pop_front();
 			if (args.empty()) {
 				show_help("Missing value for the '--ram' argument");
-				return 100;
+				return 5;
 			}
 			strval = args.front(); args.pop_front();
 			int_ram = ston<int>(strval);
@@ -128,7 +128,7 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 			args.pop_front();
 			if (args.empty()) {
 				show_help("Missing value for the '--hdd' argument");
-				return 100;
+				return 5;
 			}
 			strval = args.front(); args.pop_front();
 			int_hdd = ston<int>(strval);
@@ -136,14 +136,14 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 			args.pop_front();
 			if (args.empty()) {
 				show_help("Missing value for the '--ver' argument");
-				return 100;
+				return 5;
 			}
 			str_ver = args.front(); args.pop_front();
 		} else if (arg.compare("--api") == 0) {
 			args.pop_front();
 			if (args.empty()) {
 				show_help("Missing value for the '--api' argument");
-				return 100;
+				return 5;
 			}
 			strval = args.front(); args.pop_front();
 			int_port = ston<int>(strval);
@@ -151,7 +151,7 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 			args.pop_front();
 			if (args.empty()) {
 				show_help("Missing value for the '--context' argument");
-				return 100;
+				return 5;
 			}
 			context_id = args.front(); args.pop_front();
 		} else {
@@ -414,20 +414,25 @@ int main( int argc, char ** argv ) {
 	// Check for obvious errors
 	if (argc < 2) {
 		show_help("");
-		return 100;
+		return 5;
 	}
 
 	// Parse arguments into vector
+    string arg;
 	static list<string> args;
 	for (int i=1; i<argc; i++) {
-		args.push_back(argv[i]);
+        arg = argv[i]; args.push_back(arg);
+        if ((arg.compare("-h") == 0) || (arg.compare("--help") == 0)) {
+            show_help("");
+            return 5;
+        }
 	}
 
 	// Look for name and key
-	string arg, command, session;
+	string command, session;
 	if (args.empty()) {
 		show_help("Missing command!");
-		return 100;
+		return 5;
 	}
 	command = args.front(); args.pop_front();
 
@@ -452,14 +457,14 @@ int main( int argc, char ** argv ) {
 	// Handle cases where a session name is needed
 	if (args.empty()) {
 		show_help("Missing session name!");
-		return 100;
+		return 5;
 	}
 	session = args.front(); args.pop_front();
 
 	// Check for flag in place of session
 	if (session[0] == '-') {
 		show_help("Expected session name, not command");
-		return 100;
+		return 5;
 	}
 
 	// Calculate session key

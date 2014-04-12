@@ -454,10 +454,23 @@ int main( int argc, char ** argv ) {
 	}
 	command = args.front(); args.pop_front();
 
-	// Create a hypervisor instance
-	hv = detectHypervisor();
+	// Prepare for user interaction
 	userInteraction = boost::make_shared<CLIInteraction>();
 	progressTask = boost::make_shared<FiniteTask>();
+
+	// Create a hypervisor instance
+	hv = detectHypervisor();
+	if (!hv) {
+		if (userInteraction->confirm("No hypervisor found", "Would you like to auto-install VirtualBox in your system?") == UI_OK) {
+			installHypervisor(
+					DownloadProvider::Default(),
+					userInteraction,
+					progressTask
+				);
+		} else {
+			return 3;
+		}
+	}
 
 	// Create a CLI-Based user feedback
 	CLIProgessFeedback clifeedback;

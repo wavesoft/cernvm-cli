@@ -462,11 +462,21 @@ int main( int argc, char ** argv ) {
 	hv = detectHypervisor();
 	if (!hv) {
 		if (userInteraction->confirm("No hypervisor found", "Would you like to auto-install VirtualBox in your system?") == UI_OK) {
-			installHypervisor(
+			int ans = installHypervisor(
 					DownloadProvider::Default(),
 					userInteraction,
 					progressTask
 				);
+			if (ans != HVE_OK) {
+				cerr << "ERROR: Unable to install hypervisor" << endl;
+				return 3;
+			} else {
+				hv = detectHypervisor();
+				if (!hv) {				
+					cerr << "ERROR: Could not detect hypervisor even after installation. Sorry." << endl;
+					return 3;
+				}
+			}
 		} else {
 			return 3;
 		}

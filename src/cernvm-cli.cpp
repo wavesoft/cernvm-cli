@@ -386,7 +386,7 @@ int handle_list( list<string>& args ) {
 		HVSessionPtr sess = (*it).second;
 		cout << " - " << sess->parameters->get("name", "") << " (" << name << ")" << endl;
 		cout << "   cpus=" << sess->parameters->get("cpus", "1")
-		     << ", ram=" << sess->parameters->get("memory", "512")
+		     << ", ram=" << sess->parameters->get("ram", "512")
 		     << ", disk=" << sess->parameters->get("disk", "1024")
 		     << ", apiPort=" << sess->parameters->get("apiPort", BOOST_PP_STRINGIZE( DEFAULT_API_PORT ))
 		     << ", flags=" << sess->parameters->get("flags", "9")

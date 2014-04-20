@@ -22,6 +22,10 @@
 #include <CernVM/Utilities.h>
 
 #include <boost/make_shared.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/mutex.hpp>
+
 #include "CLIInteraction.h"
 #include "CLIProgressFeedback.h"
 
@@ -30,6 +34,8 @@
 #include <sstream>
 #include <string>
 #include <list>
+#include <algorithm>
+#include <locale>
 
 using namespace std;
 
@@ -55,26 +61,27 @@ void show_help( const string& error ) {
 	cerr << endl;
 	cerr << "Commands:" << endl;
 	cerr << endl;
-	cerr << "   setup    <session>                     The name of the new session" << endl;
-	cerr << "            [--32]                        Use 32-bit CPU (default is 64-bit)" << endl;
-	cerr << "            [--fio]                       Use FloppyIO for data exchange" << endl;
-	cerr << "            [--gui]                       Enable GUI additions" << endl;
-	cerr << "            [--dualnic]                   Use two NICs instead of NATing through one" << endl;
-	cerr << "            [--ram <MB>]                  How much RAM to allocate on the new VM (default 1024)" << endl;
-	cerr << "            [--hdd <MB>]                  How much disk to allocate on the new VM (default 1024)" << endl;
-	cerr << "            [--api <num>]                 Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
-	cerr << "            [--context <uuid>]            The ContextID for CernVM-Online to boot" << endl;
-	cerr << "            [--ver <ver>]                 The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
-    cerr << "            [--flavor devel|testing|prod] The uCernVM flavor to use (default prod)" << endl;
-	cerr << "            [--start]                     Start the VM after configuration" << endl;
+	cerr << "   setup     <session>                     The name of the new session" << endl;
+	cerr << "             [--32]                        Use 32-bit CPU (default is 64-bit)" << endl;
+	cerr << "             [--fio]                       Use FloppyIO for data exchange" << endl;
+	cerr << "             [--gui]                       Enable GUI additions" << endl;
+	cerr << "             [--dualnic]                   Use two NICs instead of NATing through one" << endl;
+	cerr << "             [--ram <MB>]                  How much RAM to allocate on the new VM (default 1024)" << endl;
+	cerr << "             [--hdd <MB>]                  How much disk to allocate on the new VM (default 1024)" << endl;
+	cerr << "             [--api <num>]                 Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
+	cerr << "             [--context <uuid>]            The ContextID for CernVM-Online to boot" << endl;
+	cerr << "             [--ver <ver>]                 The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
+    cerr << "             [--flavor devel|testing|prod] The uCernVM flavor to use (default prod)" << endl;
+	cerr << "             [--start]                     Start the VM after configuration" << endl;
 	cerr << endl;
-	cerr << "   start    <session>                     Start the VM" << endl;
-	cerr << "   stop     <session>                     Stop the VM" << endl;
-	cerr << "   save     <session>                     Save the VM on disk" << endl;
-	cerr << "   pause    <session>                     Pause the VM on memory" << endl;
-	cerr << "   resume   <session>                     Resume the VM" << endl;
-	cerr << "   remove   <session>                     Destroy and remove the VM" << endl;
-	cerr << "   get      <session> <parm> [<param>...] Get one or more configuration parameter values" << endl;
+	cerr << "   start     <session>                     Start the VM" << endl;
+	cerr << "   stop      <session>                     Stop the VM" << endl;
+	cerr << "   save      <session>                     Save the VM on disk" << endl;
+	cerr << "   pause     <session>                     Pause the VM on memory" << endl;
+	cerr << "   resume    <session>                     Resume the VM" << endl;
+	cerr << "   remove    <session>                     Destroy and remove the VM" << endl;
+	cerr << "   get       <session> <parm> [<param>...] Get one or more configuration parameter values" << endl;
+	cerr << "   waitstate <session> [<state>]           Wait until the session state changes (optionally to the given state)" << endl;
 	cerr << endl;
 	cerr << "Examples:" << endl;
 	cerr << endl;
@@ -424,6 +431,75 @@ int handle_get( list<string>& args, const string& name, const string& key ) {
     return 0;
 }
 
+
+/**
+ * Callback for handling the state change
+ */
+boost::mutex 				stateWaitMutex;
+boost::condition_variable 	stateWaitCond;
+bool 						stateWaitFlag;
+int 						stateWaitTarget;
+
+int handle_waitstate( list<string>& args, const string& name, const string& key ) {
+
+	// Try to open a session
+	ParameterMapPtr params = ParameterMap::instance();
+	params->set("name", name)
+		   .set("secret", key);
+	HVSessionPtr session = hv->sessionOpen( params, progressTask );
+
+	// Flush stderror (status) messages
+	cerr.flush();
+
+	// Calculate the state target
+	stateWaitTarget = -1;
+	if (!args.empty()) {
+		string state = args.front();
+		if (state == "available") {
+			stateWaitTarget = SS_AVAILABLE;
+		} else if (state == "poweroff") {
+			stateWaitTarget = SS_POWEROFF;
+		} else if (state == "saved") {
+			stateWaitTarget = SS_SAVED;
+		} else if (state == "paused") {
+			stateWaitTarget = SS_PAUSED;
+		} else if (state == "running") {
+			stateWaitTarget = SS_RUNNING;
+		} else if (state == "missing") {
+			stateWaitTarget = SS_MISSING;
+		} else {
+            show_help("Unknown state specified! It must be one of: available, poweroff, saved, paused, running, missing");
+            return 5;
+		}
+	}
+
+	// Synchronize state
+	session->update();
+
+	// Wait for state change
+	CVMWA_LOG("Log","Reading time...");
+	int lastState = session->local->getNum<int>( "state", -1 );
+	CVMWA_LOG("Log","Done! " << lastState);
+	while (true) {
+		int state = session->local->getNum<int>( "state", -1 );
+		if (state != lastState) {
+			lastState = state;
+			if ((stateWaitTarget == -1) || (stateWaitTarget == state)) {
+				break;
+			}
+		}
+		CVMWA_LOG("Log","SLEEP!");
+		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+		CVMWA_LOG("Log","UPDATE!");
+		session->update();
+		CVMWA_LOG("Log","DONE!");
+	}
+
+	// Return
+	return lastState;
+
+}
+
 /**
  * Entry point for the CLI
  */
@@ -551,8 +627,11 @@ int main( int argc, char ** argv ) {
 	} else if (command.compare("remove") == 0) { /* REMOVE */
 		return handle_remove(args, session, key);
 
-    } else if (command.compare("get") == 0) { /* API */
+    } else if (command.compare("get") == 0) { /* GET PARAMETER */
         return handle_get(args, session, key);
+
+    } else if (command.compare("waitstate") == 0) { /* WAIT STATE CHANGE */
+    	return handle_waitstate(args, session, key);
 
 	} else {
 		cerr << "Unknown command " << arg << "!" << endl;

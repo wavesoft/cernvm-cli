@@ -41,12 +41,17 @@ CLIInteraction::CLIInteraction() : UserInteraction() {
 	this->setAlertHandler( boost::bind(&CLIInteraction::cli_alert, this, _1, _2, _3) );
 	this->setLicenseHandler( boost::bind(&CLIInteraction::cli_license, this, _1, _2, _3) );
 	this->setLicenseURLHandler( boost::bind(&CLIInteraction::cli_license_url, this, _1, _2, _3) );
+	this->silent = false;
 };
 
 /**
  * Confirm from the CLI
  */
 void CLIInteraction::cli_confirm(const std::string& title, const std::string& message, const callbackResult& result) {
+	if (silent) {
+		result(UI_OK);
+		return;
+	}
 	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << message << std::endl;
 	if (prompt("Do you confirm?")) {
@@ -60,6 +65,10 @@ void CLIInteraction::cli_confirm(const std::string& title, const std::string& me
  * Alert from the CLI
  */
 void CLIInteraction::cli_alert(const std::string& title, const std::string& message, const callbackResult& result) {
+	if (silent) {
+		result(UI_OK);
+		return;
+	}
 	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << message << std::endl;
 	std::cout << "-----------------------------" << std::endl;
@@ -69,6 +78,10 @@ void CLIInteraction::cli_alert(const std::string& title, const std::string& mess
  * Confirm licese from the CLI
  */
 void CLIInteraction::cli_license(const std::string& title, const std::string& message, const callbackResult& result) {
+	if (silent) {
+		result(UI_OK);
+		return;
+	}
 	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << message << std::endl;
 	if (prompt("Do you accept the above license?")) {
@@ -82,6 +95,10 @@ void CLIInteraction::cli_license(const std::string& title, const std::string& me
  * Confirm licese by URL from the CLI
  */
 void CLIInteraction::cli_license_url(const std::string& title, const std::string& url, const callbackResult& result) {
+	if (silent) {
+		result(UI_OK);
+		return;
+	}
 	std::cout << std::endl << "---[ " << title << " ]---" << std::endl;
 	std::cout << "See the license here: " << url << std::endl;
 	if (prompt("Do you accept the above license?")) {

@@ -30,17 +30,20 @@ void CLIProgessFeedback::bindTo( const FiniteTaskPtr & pf ) {
 }
 
 void CLIProgessFeedback::fb_started(VariantArgList& args) {
+	if (silent) return;
 	std::ostringstream oss;
 	oss << "[----] " << boost::get<string>( args[0] );
 	showMessage(oss);
 }
 
 void CLIProgessFeedback::fb_completed(VariantArgList& args) {
+	if (silent) return;
 	clearMessage();
     cerr << "[ ok ] " << boost::get<string>( args[0] ) << endl;
 }
 
 void CLIProgessFeedback::fb_failed(VariantArgList& args) {
+	if (silent) return;
 	std::ostringstream oss;
 	oss << "[!!!!] " << boost::get<string>( args[0] );
 	showMessage(oss);
@@ -48,6 +51,7 @@ void CLIProgessFeedback::fb_failed(VariantArgList& args) {
 }
 
 void CLIProgessFeedback::fb_progress(VariantArgList& args) {
+	if (silent) return;
 	std::ostringstream oss;
 	int percentInt = (int)(boost::get<double>( args[1] ) * 100.0);
 
@@ -60,6 +64,7 @@ void CLIProgessFeedback::fb_progress(VariantArgList& args) {
 }
 
 void CLIProgessFeedback::showMessage(const std::ostringstream& ss) {
+	if (silent) return;
 	std::string msg = ss.str();
 	if (messageLength > 0)
 		clearMessage();
@@ -69,6 +74,7 @@ void CLIProgessFeedback::showMessage(const std::ostringstream& ss) {
 }
 
 void CLIProgessFeedback::clearMessage() {
+	if (silent) return;
 	if (messageLength <= 0) return;
 	// Clear area
 	int i;

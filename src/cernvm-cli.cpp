@@ -40,9 +40,9 @@
 using namespace std;
 
 // Global variables
-HVInstancePtr 		hv;
-UserInteractionPtr 	userInteraction;
-FiniteTaskPtr	 	progressTask;
+HVInstancePtr 						hv;
+boost::shared_ptr<CLIInteraction> 	userInteraction;
+FiniteTaskPtr	 					progressTask;
 
 void show_help( const string& error ) {
 	if (!error.empty()) {
@@ -53,11 +53,16 @@ void show_help( const string& error ) {
 	cerr << endl;
     cerr << "Usage:" << endl;
 	cerr << endl;
-	cerr << "   cernvm-cli <command> [<session> [<arguments>]]" << endl;
+	cerr << "   cernvm-cli [<options>] <command> [<session> [<arguments>]]" << endl;
+	cerr << endl;
+	cerr << "Options:" << endl;
+	cerr << endl;
+	cerr << "   -s | --silent                           Do not display any message" << endl;
+	cerr << "   -h | --help                             Show this help screen" << endl;
 	cerr << endl;
 	cerr << "Commands without arguments:" << endl;
 	cerr << endl;
-	cerr << "   list                                   List the registered machines" << endl;
+	cerr << "   list                                    List the registered machines" << endl;
 	cerr << endl;
 	cerr << "Commands:" << endl;
 	cerr << endl;
@@ -476,10 +481,13 @@ int handle_waitstate( list<string>& args, const string& name, const string& key 
 	// Synchronize state
 	session->update();
 
-	// Wait for state change
-	CVMWA_LOG("Log","Reading time...");
+	// Check if we are already on the specified state
 	int lastState = session->local->getNum<int>( "state", -1 );
-	CVMWA_LOG("Log","Done! " << lastState);
+	if (lastState == stateWaitTarget) {
+		return lastState;
+	}
+
+	// Wait for state change
 	while (true) {
 		int state = session->local->getNum<int>( "state", -1 );
 		if (state != lastState) {
@@ -488,11 +496,8 @@ int handle_waitstate( list<string>& args, const string& name, const string& key 
 				break;
 			}
 		}
-		CVMWA_LOG("Log","SLEEP!");
 		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
-		CVMWA_LOG("Log","UPDATE!");
 		session->update();
-		CVMWA_LOG("Log","DONE!");
 	}
 
 	// Return
@@ -511,14 +516,29 @@ int main( int argc, char ** argv ) {
 		return 5;
 	}
 
+	// Prepare for user interaction
+	userInteraction = boost::make_shared<CLIInteraction>();
+	progressTask = boost::make_shared<FiniteTask>();
+
+	// Create a CLI-Based user feedback
+	CLIProgessFeedback clifeedback;
+	clifeedback.bindTo( progressTask );
+
 	// Parse arguments into vector
     string arg;
 	static list<string> args;
 	for (int i=1; i<argc; i++) {
-        arg = argv[i]; args.push_back(arg);
+        arg = argv[i];
+
+        // Take this opportunity to scan for flags
         if ((arg.compare("-h") == 0) || (arg.compare("--help") == 0)) {
             show_help("");
             return 5;
+        } else if ((arg.compare("-s") == 0) || (arg.compare("--silent") == 0)) {
+        	userInteraction->silent = true;
+        	clifeedback.silent = true;
+        } else {
+        	args.push_back(arg);
         }
 	}
 
@@ -529,10 +549,6 @@ int main( int argc, char ** argv ) {
 		return 5;
 	}
 	command = args.front(); args.pop_front();
-
-	// Prepare for user interaction
-	userInteraction = boost::make_shared<CLIInteraction>();
-	progressTask = boost::make_shared<FiniteTask>();
 
 	// Create a hypervisor instance
 	hv = detectHypervisor();
@@ -557,10 +573,6 @@ int main( int argc, char ** argv ) {
 			return 3;
 		}
 	}
-
-	// Create a CLI-Based user feedback
-	CLIProgessFeedback clifeedback;
-	clifeedback.bindTo( progressTask );
 
 	// Initialize hypervisor
 	hv->setUserInteraction( userInteraction );

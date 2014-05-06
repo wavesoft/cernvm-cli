@@ -61,6 +61,11 @@ public:
 	 */
 	void cli_license_url(const std::string& title, const std::string& url, const callbackResult& result);
 
+	/**
+	 * Automatically accept messages
+	 */
+	bool 	silent;
+
 };
 
 #endif /* end of include guard: CLI_INTERACTION_H */

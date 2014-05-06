@@ -42,7 +42,14 @@ using namespace std;
 class CLIProgessFeedback {
 public:
 
+	// Constructor
+	CLIProgessFeedback() {
+		silent = false;
+	}
+
 	void 	bindTo( const FiniteTaskPtr & pf );
+
+	bool 	silent;
 
 private:
 

@@ -20,6 +20,7 @@
 
 #include <CernVM/Hypervisor.h>
 #include <CernVM/Utilities.h>
+#include <CernVM/DomainKeystore.h>
 
 #include <boost/make_shared.hpp>
 #include <boost/thread.hpp>
@@ -509,6 +510,7 @@ int handle_waitstate( list<string>& args, const string& name, const string& key 
  * Entry point for the CLI
  */
 int main( int argc, char ** argv ) {
+	int res;
 
 	// Check for obvious errors
 	if (argc < 2) {
@@ -550,12 +552,24 @@ int main( int argc, char ** argv ) {
 	}
 	command = args.front(); args.pop_front();
 
+	// Initialize cryptographic keystore
+	DomainKeystore::Initialize();
+	DomainKeystore keystore;
+
+    // Synchronize keystore (if it's nessecary)
+    res = keystore.updateAuthorizedKeystore( DownloadProvider::Default() );
+    if (res != HVE_OK) {
+		cerr << "ERROR: Could not initialize the cryptographic keystore." << endl;
+		return 3;
+    }
+
 	// Create a hypervisor instance
 	hv = detectHypervisor();
 	if (!hv) {
 		if (userInteraction->confirm("No hypervisor found", "Would you like to auto-install VirtualBox in your system?") == UI_OK) {
 			int ans = installHypervisor(
 					DownloadProvider::Default(),
+					keystore,
 					userInteraction,
 					progressTask
 				);
@@ -576,7 +590,7 @@ int main( int argc, char ** argv ) {
 
 	// Initialize hypervisor
 	hv->setUserInteraction( userInteraction );
-	hv->waitTillReady( progressTask, userInteraction );
+	hv->waitTillReady( keystore, progressTask, userInteraction );
 
 	// Handle commands wihtout parameters
 	if (command.compare("list") == 0) { /* LIST */

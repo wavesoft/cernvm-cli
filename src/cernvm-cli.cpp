@@ -77,7 +77,7 @@ void show_help( const string& error ) {
 	cerr << "             [--api <num>]                 Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
 	cerr << "             [--context <uuid>]            The ContextID for CernVM-Online to boot" << endl;
 	cerr << "             [--ver <ver>]                 The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
-    cerr << "             [--flavor devel|testing|prod] The uCernVM flavor to use (default prod)" << endl;
+    cerr << "             [--flavor devel|testing|prod] The uCernVM flavor to use (default " << DEFAULT_CERNVM_FLAVOR <<")" << endl;
 	cerr << "             [--start]                     Start the VM after configuration" << endl;
 	cerr << endl;
 	cerr << "   start     <session>                     Start the VM" << endl;
@@ -108,7 +108,7 @@ void show_help( const string& error ) {
 int handle_setup( list<string>& args, const string& name, const string& key ) {
 
 	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT, int_port=80;
-	string	str_ver="1.17-8", context_id="", str_flavor="prod", strval, arg;
+	string	str_ver=DEFAULT_CERNVM_VERSION, context_id="", str_flavor=DEFAULT_CERNVM_FLAVOR, strval, arg;
 	bool 	bool_start=false;
 
 	while (!args.empty()) {
@@ -183,7 +183,9 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 			}
 			context_id = args.front(); args.pop_front();
 		} else {
-			cerr << "WARNING: Ignored unnown parameter '" << arg << "'" << endl;
+			args.pop_front();
+            show_help("Unknown parameter '" + arg + "'");
+            return 5;
 		}
 	}
 

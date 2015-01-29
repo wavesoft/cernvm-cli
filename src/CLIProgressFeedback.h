@@ -45,6 +45,7 @@ public:
 	// Constructor
 	CLIProgessFeedback() {
 		silent = false;
+        messageLength = 0;
 	}
 
 	void 	bindTo( const FiniteTaskPtr & pf );

@@ -209,6 +209,7 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 	params->set("name", name)
 		   .set("secret", key)
 		   .set("cernvmVersion", str_ver)
+           .set("cernvmFlavor", str_flavor)
 		   .set("userData", oss.str())
 		   .setNum<int>("apiPort", int_port)
 		   .setNum<int>("flags", int_flags)
@@ -405,7 +406,7 @@ int handle_list( list<string>& args ) {
 		     << ", disk=" << sess->parameters->get("disk", "1024")
 		     << ", apiPort=" << sess->parameters->get("apiPort", BOOST_PP_STRINGIZE( DEFAULT_API_PORT ))
 		     << ", flags=" << sess->parameters->get("flags", "9")
-             << ", uCernVM=" << sess->parameters->get("cernvmVersion", DEFAULT_CERNVM_VERSION) << endl << endl;
+             << ", uCernVM=" << sess->parameters->get("cernvmVersion", DEFAULT_CERNVM_VERSION) << "," << sess->parameters->get("cernvmFlavor", DEFAULT_CERNVM_FLAVOR) << endl << endl;
 	}
     if (hv->sessions.empty()) {
         cerr << " (There are no registered sessions)" << endl;

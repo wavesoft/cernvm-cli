@@ -72,8 +72,8 @@ void show_help( const string& error ) {
 	cerr << "             [--fio]                       Use FloppyIO for data exchange" << endl;
 	cerr << "             [--gui]                       Enable GUI additions" << endl;
 	cerr << "             [--dualnic]                   Use two NICs instead of NATing through one" << endl;
-	cerr << "             [--ram <MB>]                  How much RAM to allocate on the new VM (default 1024)" << endl;
-	cerr << "             [--hdd <MB>]                  How much disk to allocate on the new VM (default 1024)" << endl;
+	cerr << "             [--ram <MB>]                  How much RAM to allocate on the new VM (default 512M)" << endl;
+	cerr << "             [--hdd <MB>]                  How much disk to allocate on the new VM (default 80Gb)" << endl;
 	cerr << "             [--api <num>]                 Define the API port to use (default " << DEFAULT_API_PORT << ")" << endl;
 	cerr << "             [--context <uuid>]            The ContextID for CernVM-Online to boot" << endl;
 	cerr << "             [--ver <ver>]                 The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
@@ -107,7 +107,7 @@ void show_help( const string& error ) {
  */
 int handle_setup( list<string>& args, const string& name, const string& key ) {
 
-	int  	int_ram=512, int_hdd=10240, int_flags=HVF_SYSTEM_64BIT, int_port=80;
+	int  	int_ram=512, int_hdd=81920, int_flags=HVF_SYSTEM_64BIT, int_port=80;
 	string	str_ver=DEFAULT_CERNVM_VERSION, context_id="", str_flavor=DEFAULT_CERNVM_FLAVOR, strval, arg;
 	bool 	bool_start=false;
 

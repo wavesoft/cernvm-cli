@@ -29,6 +29,7 @@
 
 #include "CLIInteraction.h"
 #include "CLIProgressFeedback.h"
+#include "cli-utils.h"
 
 #include <map>
 #include <iostream>
@@ -79,6 +80,7 @@ void show_help( const string& error ) {
 	cerr << "             [--ver <ver>]                 The uCernVM version to use (default " << DEFAULT_CERNVM_VERSION << ")" << endl;
     cerr << "             [--flavor devel|testing|prod] The uCernVM flavor to use (default " << DEFAULT_CERNVM_FLAVOR <<")" << endl;
 	cerr << "             [--start]                     Start the VM after configuration" << endl;
+	cerr << "             [--ssh]                       Synonym of --api 22" << endl;
 	cerr << endl;
 	cerr << "   start     <session>                     Start the VM" << endl;
 	cerr << "   stop      <session>                     Stop the VM" << endl;
@@ -103,13 +105,17 @@ void show_help( const string& error ) {
 }
 
 /**
+ * Get the first user 
+ */
+
+/**
  * Handle the SETUP command
  */
 int handle_setup( list<string>& args, const string& name, const string& key ) {
 
 	int  	int_ram=512, int_hdd=81920, int_flags=HVF_SYSTEM_64BIT, int_port=80;
 	string	str_ver=DEFAULT_CERNVM_VERSION, context_id="", str_flavor=DEFAULT_CERNVM_FLAVOR, strval, arg;
-	bool 	bool_start=false;
+	bool 	bool_start=false, ssh_wait=false;
 
 	while (!args.empty()) {
 		arg = args.front();
@@ -122,6 +128,10 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 		} else if (arg.compare("--start") == 0) {
 			args.pop_front();
 			bool_start = true;
+		} else if (arg.compare("--ssh") == 0) {
+			args.pop_front();
+			int_port = 22;
+			ssh_wait = true;
 		} else if (arg.compare("--gui") == 0) {
 			args.pop_front();
 			int_flags |= HVF_GUEST_ADDITIONS;
@@ -188,13 +198,6 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
             return 5;
 		}
 	}
-
-	/*
-	cerr << "Name=" << name << ", Secret=" << key << endl;
-	cerr << "Version=" << str_ver << ", Flags=" << int_flags << endl;
-	cerr << "Ram=" << int_ram << ", Hdd=" << int_hdd << endl;
-	cerr << "Hypervisor=" << hv->version.verString << endl;
-	*/
 	
 	// Prepare UserData
 	ostringstream oss;
@@ -214,7 +217,7 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 		   .setNum<int>("apiPort", int_port)
 		   .setNum<int>("flags", int_flags)
 		   .setNum<int>("ram", int_ram)
-		   .setNum<int>("hdd", int_hdd);
+		   .setNum<int>("disk", int_hdd);
 	HVSessionPtr session = hv->sessionOpen( params, progressTask );
     
     // Open & reach poweroff state
@@ -227,6 +230,31 @@ int handle_setup( list<string>& args, const string& name, const string& key ) {
 
 	// Wait for completion
 	session->wait();
+
+	// If we have SSH, display SSH port
+	if (ssh_wait) {
+
+		// Wait for SSH to appear
+		while (!session->isAPIAlive(HSK_SIMPLE)) {
+			boost::this_thread::sleep(boost::posix_time::milliseconds(5000));
+		}
+
+		// Lookup the user to use for ssh
+		string user = "root";
+		if (!context_id.empty()) {
+
+			// Get user ID from context
+			user = get_user_from_context( context_id, DownloadProvider::Default() );
+
+			// Fallback to root
+			if (user.empty())
+				user = "root";
+		}
+
+		// Perform SSH
+		open_ssh( session->getAPIHost(), session->getAPIPort(), user );
+
+	}
 
 	// Cleanup thread
 	session->abort();

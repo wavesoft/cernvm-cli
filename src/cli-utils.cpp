@@ -22,14 +22,122 @@
 #include <CernVM/Hypervisor.h>
 #include <vector>
 
+#ifdef _WIN32
+#include <Searchapi.h>
+#include <atldbcli.h>
+
+/**
+ * Use Windows Search to locate PuTTY.exe
+ */
+string findPuTTY() {
+    HRESULT hr;
+    CDataSource cDataSource;
+    wstring filename;
+
+    // Co-Initialize
+    CoInitialize( NULL );
+
+    // Open a data source to windows search index
+    hr = cDataSource.OpenFromInitializationString(L"provider=Search.CollatorDSO.1;EXTENDED PROPERTIES=\"Application=Windows\"");
+    if (SUCCEEDED(hr))
+    {
+        CSession cSession;
+
+        // Open a session
+        hr = cSession.Open(cDataSource);
+        if (SUCCEEDED(hr))
+        {
+
+            // Invoke query
+            CCommand<CDynamicAccessor, CRowset> cCommand;
+            hr = cCommand.Open(cSession, "SELECT System.ItemURL FROM SYSTEMINDEX WHERE System.FileName = \'putty.exe\'");
+            if (SUCCEEDED(hr))
+            {
+
+                // Process results
+                for (hr = cCommand.MoveFirst(); S_OK == hr; hr = cCommand.MoveNext())
+                {
+                    DBTYPE typ;
+                    cCommand.GetColumnType(1, &typ); 
+ 
+                    /* Cast from unicode to string */
+                    const wstring ws( (LPWSTR) cCommand.GetValue(1) );
+                    const locale locale("");
+                    typedef codecvt<wchar_t, char, mbstate_t> converter_type;
+                    const converter_type& converter = use_facet<converter_type>(locale);
+                    vector<char> to(ws.length() * converter.max_length());
+                    mbstate_t state;
+                    const wchar_t* from_next;
+                    char* to_next;
+                    const converter_type::result result = converter.out(state, ws.data(), ws.data() + ws.length(), from_next, &to[0], &to[0] + to.size(), to_next);
+                    if (result == converter_type::ok || result == converter_type::noconv) {
+                        const string s(&to[5], to_next); // Skip file:
+                        return s;
+                    } else {
+                        // Could not convert filename
+                        return "";
+                    }
+
+                }
+                cCommand.Close();
+            }
+        }
+    }
+
+    // Not found
+    return "";
+
+}
+#endif
+
 /**
  * Open SSH using system's SSH utility
  */
 void open_ssh( const string& host, const int port, const string& user ) {
+    ostringstream oss;
 #ifdef _WIN32
-	cout << "You can now use your SSH client to connect to: " << host << ":" << port << endl;
+
+    // Locate PuTTY
+    string putty = findPuTTY();
+    if (putty.empty()) {
+    	cout << "You can now use your SSH client to connect to: " << host << ":" << port << endl;
+        return;
+    }
+
+    // Prepare command-line
+    oss << "-ssh -P " << port << " " << user << "@" << host;
+    string arg_str = oss.str();
+    LPSTR args = const_cast<char *>(arg_str.c_str());
+
+    // Prepare startup info
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory( &si, sizeof(si) );
+    si.cb = sizeof(si);
+    ZeroMemory( &pi, sizeof(pi) );
+
+    // Launch application
+    if (!CreateProcess(
+       putty.c_str(),
+       args,
+       NULL,
+       NULL,
+       FALSE,
+       0,
+       NULL,
+       NULL,
+       &si,
+       &pi )
+    ) {
+        cout << "Could not start PuTTY, but you can now use any SSH client to connect to: " << host << ":" << port << endl;
+        return;
+    }
+
+    // Close process and thread handles. 
+    CloseHandle( pi.hProcess );
+    CloseHandle( pi.hThread );
+
 #else
-	ostringstream oss;
 	oss << "/usr/bin/ssh -o \"UserKnownHostsFile /dev/null\" -p " << port << " " << user << "@" << host;
 	system(oss.str().c_str());
 #endif
